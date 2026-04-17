@@ -1,0 +1,49 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>叮咚兄弟</title>
+    <style>
+      :root {
+        color-scheme: dark;
+      }
+
+      body {
+        margin: 0;
+        min-height: 100vh;
+        display: grid;
+        place-items: center;
+        background: #111822;
+        color: #f6e7a3;
+        font-family: system-ui, sans-serif;
+      }
+
+      p {
+        margin: 0;
+        font-size: 14px;
+        letter-spacing: 0.08em;
+      }
+    </style>
+  </head>
+  <body>
+    <p id="status">正在加载...</p>
+    <script src="./shell-config.js"></script>
+    <script>
+      const statusElement = document.getElementById("status");
+      const remoteUrl = globalThis.__DINGDONG_REMOTE_URL__;
+
+      if (typeof remoteUrl !== "string" || !/^https?:\/\//u.test(remoteUrl)) {
+        if (statusElement) {
+          statusElement.textContent = "错误：缺少远程地址。";
+        }
+        throw new Error("Native shell is missing __DINGDONG_REMOTE_URL__.");
+      }
+
+      if (statusElement) {
+        statusElement.textContent = "正在连接...";
+      }
+      window.location.replace(remoteUrl);
+    </script>
+  </body>
+</html>

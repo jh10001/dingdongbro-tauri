@@ -1,0 +1,36 @@
+{
+  "$schema": "../node_modules/@tauri-apps/cli/config.schema.json",
+  "productName": "DingDongBro",
+  "version": "0.3.2",
+  "identifier": "com.dingdongbro.game",
+  "build": {
+    "frontendDist": "../build/desktop-shell",
+    "beforeDevCommand": "bun scripts/build-desktop-shell.ts",
+    "beforeBuildCommand": "bun scripts/build-desktop-shell.ts"
+  },
+  "app": {
+    "windows": [
+      {
+        "title": "DingDongBro",
+        "width": 1280,
+        "height": 720,
+        "resizable": true,
+        "fullscreen": false
+      }
+    ],
+    "security": {
+      "csp": null
+    }
+  },
+  "bundle": {
+    "active": true,
+    "targets": "all",
+    "icon": [
+      "icons/32x32.png",
+      "icons/128x128.png",
+      "icons/128x128@2x.png",
+      "icons/icon.icns",
+      "icons/icon.ico"
+    ]
+  }
+}
