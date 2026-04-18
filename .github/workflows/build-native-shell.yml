@@ -84,7 +84,7 @@ jobs:
         run: bun run build:desktop
 
       - name: Upload desktop artifacts
-        uses: actions/upload-artifact@v5
+        uses: actions/upload-artifact@v7
         with:
           name: dingdongbro-desktop-${{ matrix.os }}
           path: src-tauri/target/release/bundle/**/*
@@ -115,9 +115,10 @@ jobs:
         with:
           distribution: temurin
           java-version: "17"
+          cache: gradle
 
       - name: Setup Android SDK
-        uses: android-actions/setup-android@v3
+        uses: android-actions/setup-android@v4
         with:
           accept-android-sdk-licenses: false
           log-accepted-android-sdk-licenses: false
@@ -172,7 +173,7 @@ jobs:
         run: bun run package:mobile:android
 
       - name: Upload Android artifacts
-        uses: actions/upload-artifact@v5
+        uses: actions/upload-artifact@v7
         with:
           name: dingdongbro-android
           path: |
@@ -252,7 +253,7 @@ jobs:
         run: cat /tmp/tauri-ios-open.log || true
 
       - name: Upload iOS artifacts
-        uses: actions/upload-artifact@v5
+        uses: actions/upload-artifact@v7
         with:
           name: dingdongbro-ios
           path: |

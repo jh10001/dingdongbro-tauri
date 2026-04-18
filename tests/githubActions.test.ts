@@ -32,7 +32,7 @@ describe("github actions workflow", () => {
       "dingdongbro-desktop-${{ matrix.os }}",
       "dingdongbro-android",
       "dingdongbro-ios",
-      "actions/upload-artifact@v5",
+      "actions/upload-artifact@v7",
     ]) {
       expect(workflow).toContain(snippet);
     }
@@ -43,7 +43,8 @@ describe("github actions workflow", () => {
 
     for (const snippet of [
       "actions/setup-java@v5",
-      "android-actions/setup-android@v3",
+      "cache: gradle",
+      "android-actions/setup-android@v4",
       "accept-android-sdk-licenses: false",
       "ANDROID_RELEASE_KEYSTORE_BASE64",
       "ANDROID_RELEASE_KEYSTORE_PASSWORD",

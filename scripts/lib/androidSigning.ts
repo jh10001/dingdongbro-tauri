@@ -97,7 +97,7 @@ export const ensureAndroidGradleReleaseSigning = (source: string): string => {
       `${indent}        }`,
       `${indent}        keyAlias = keystoreProperties["keyAlias"] as String`,
       `${indent}        keyPassword = (keystoreProperties["keyPassword"] ?: keystoreProperties["password"]) as String`,
-      `${indent}        storeFile = file(keystoreProperties["storeFile"] as String)`,
+      `${indent}        storeFile = rootProject.file(keystoreProperties["storeFile"] as String)`,
       `${indent}        storePassword = (keystoreProperties["storePassword"] ?: keystoreProperties["password"]) as String`,
       `${indent}    }`,
       `${indent}}`,

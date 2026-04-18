@@ -75,6 +75,7 @@ describe("android release signing helpers", () => {
     expect(patched).toContain("import java.util.Properties");
     expect(patched).toContain('create("release")');
     expect(patched).toContain('keyAlias = keystoreProperties["keyAlias"] as String');
+    expect(patched).toContain('storeFile = rootProject.file(keystoreProperties["storeFile"] as String)');
     expect(patched).toContain('signingConfig = signingConfigs.getByName("release")');
     expect(ensureAndroidGradleReleaseSigning(patched)).toBe(patched);
   });
