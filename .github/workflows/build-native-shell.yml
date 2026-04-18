@@ -83,11 +83,32 @@ jobs:
       - name: Build desktop shell
         run: bun run build:desktop
 
+      - name: Package portable Windows desktop executable
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          $portableOutputDir = "build/portable"
+          New-Item -ItemType Directory -Force -Path $portableOutputDir | Out-Null
+
+          $desktopExecutable = Get-ChildItem -Path "src-tauri/target/release" -Filter "*.exe" -File | Select-Object -First 1
+          if (-not $desktopExecutable) {
+            throw "Could not find the built Windows desktop executable in src-tauri/target/release."
+          }
+
+          $portableArchivePath = Join-Path $portableOutputDir "dingdongbro-desktop-windows-latest-portable.7z"
+          & 7z a -t7z -mx=9 $portableArchivePath $desktopExecutable.FullName
+
+          if ($LASTEXITCODE -ne 0) {
+            throw "7z failed to create the portable Windows archive."
+          }
+
       - name: Upload desktop artifacts
         uses: actions/upload-artifact@v7
         with:
           name: dingdongbro-desktop-${{ matrix.os }}
-          path: src-tauri/target/release/bundle/**/*
+          path: |
+            src-tauri/target/release/bundle/**/*
+            build/portable/**/*.7z
           if-no-files-found: error
 
   android:
@@ -115,7 +136,6 @@ jobs:
         with:
           distribution: temurin
           java-version: "17"
-          cache: gradle
 
       - name: Setup Android SDK
         uses: android-actions/setup-android@v4
@@ -167,6 +187,21 @@ jobs:
 
       - name: Install dependencies
         run: bun install --frozen-lockfile
+
+      - name: Ensure Android project scaffold
+        run: bun run package:mobile android
+
+      - name: Restore Gradle cache
+        uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: "17"
+          cache: gradle
+          cache-dependency-path: |
+            src-tauri/gen/android/**/*.gradle*
+            src-tauri/gen/android/**/gradle-wrapper.properties
+            src-tauri/gen/android/**/gradle.properties
+            src-tauri/gen/android/**/gradle/libs.versions.toml
 
       # This job uses an upload keystore provided through GitHub secrets, not the Play App Signing key.
       - name: Build Android shell
