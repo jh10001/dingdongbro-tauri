@@ -3,3 +3,4 @@ build/
 .tmp/
 src-tauri/target/
 src-tauri/gen/
+*.p12

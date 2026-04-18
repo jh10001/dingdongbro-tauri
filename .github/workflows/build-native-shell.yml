@@ -85,16 +85,21 @@ jobs:
       - name: Upload desktop artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: tauri-shell-desktop-${{ matrix.os }}
+          name: dingdongbro-desktop-${{ matrix.os }}
           path: src-tauri/target/release/bundle/**/*
           if-no-files-found: error
 
   android:
-    name: Android
+    name: Android (signed)
     needs: verify
+    if: github.event_name != 'pull_request'
     runs-on: ubuntu-22.04
     env:
       NDK_VERSION: 27.0.12077973
+      ANDROID_RELEASE_KEYSTORE_BASE64: ${{ secrets.ANDROID_RELEASE_KEYSTORE_BASE64 }}
+      ANDROID_RELEASE_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_RELEASE_KEYSTORE_PASSWORD }}
+      ANDROID_RELEASE_KEY_ALIAS: ${{ secrets.ANDROID_RELEASE_KEY_ALIAS }}
+      ANDROID_RELEASE_KEY_PASSWORD: ${{ secrets.ANDROID_RELEASE_KEY_PASSWORD }}
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -113,9 +118,21 @@ jobs:
       - name: Setup Android SDK
         uses: android-actions/setup-android@v3
 
+      - name: Validate Android signing secrets
+        shell: bash
+        run: |
+          for secret_name in ANDROID_RELEASE_KEYSTORE_BASE64 ANDROID_RELEASE_KEYSTORE_PASSWORD ANDROID_RELEASE_KEY_ALIAS; do
+            if [ -z "${!secret_name}" ]; then
+              echo "Missing required GitHub secret: ${secret_name}" >&2
+              exit 1
+            fi
+          done
+
       - name: Accept Android licenses
         shell: bash
-        run: yes | sdkmanager --licenses > /dev/null
+        run: |
+          set +o pipefail
+          yes | sdkmanager --licenses > /dev/null
 
       - name: Install Android SDK components
         shell: bash
@@ -146,14 +163,72 @@ jobs:
       - name: Install dependencies
         run: bun install --frozen-lockfile
 
+      # This job uses an upload keystore provided through GitHub secrets, not the Play App Signing key.
       - name: Build Android shell
         run: bun run package:mobile:android
 
       - name: Upload Android artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: tauri-shell-android
+          name: dingdongbro-android
           path: |
             src-tauri/gen/android/app/build/outputs/**/*.apk
             src-tauri/gen/android/app/build/outputs/**/*.aab
+          if-no-files-found: error
+
+  ios:
+    name: iOS (unsigned)
+    needs: verify
+    runs-on: macos-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: 1.3.8
+
+      - name: Install Rust stable with iOS targets
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: aarch64-apple-ios,aarch64-apple-ios-sim,x86_64-apple-ios
+
+      - name: Cache Rust build artifacts
+        uses: swatinem/rust-cache@v2
+        with:
+          workspaces: ./src-tauri -> src-tauri/target
+
+      - name: Install dependencies
+        run: bun install --frozen-lockfile
+
+      - name: Generate iOS project
+        run: bun run package:mobile -- ios
+
+      - name: Build unsigned iOS archive
+        shell: bash
+        run: |
+          XCODE_PROJECT="$(find src-tauri/gen/apple -maxdepth 1 -name '*.xcodeproj' | head -n 1)"
+          if [ -z "$XCODE_PROJECT" ]; then
+            echo "Missing generated Xcode project under src-tauri/gen/apple" >&2
+            exit 1
+          fi
+
+          APP_NAME="$(basename "$XCODE_PROJECT" .xcodeproj)"
+          xcodebuild archive \
+            -project "$XCODE_PROJECT" \
+            -scheme "${APP_NAME}_iOS" \
+            -archivePath "src-tauri/gen/apple/build/${APP_NAME}.xcarchive" \
+            -destination 'generic/platform=iOS' \
+            -configuration Release \
+            CODE_SIGNING_REQUIRED=NO \
+            CODE_SIGNING_ALLOWED=NO
+
+      - name: Upload iOS artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: dingdongbro-ios
+          path: |
+            src-tauri/gen/apple/build/**/*.xcarchive
+            src-tauri/gen/apple/build/**/*.app
           if-no-files-found: error

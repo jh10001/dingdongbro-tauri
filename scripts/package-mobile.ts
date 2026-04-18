@@ -1,6 +1,7 @@
 import { existsSync } from "node:fs";
 import { resolve } from "node:path";
 
+import { prepareAndroidReleaseSigning } from "./lib/androidSigning";
 import {
   getTauriMobileBuildArgs,
   getTauriMobileInitArgs,
@@ -39,14 +40,16 @@ export interface PackageMobileOptions extends EnsureTauriMobileProjectsOptions {
   args?: string[];
   env?: Record<string, string | undefined>;
   hostPlatform?: string;
+  prepareAndroidReleaseSigning?: typeof prepareAndroidReleaseSigning;
 }
 
 export const packageMobile = (options: PackageMobileOptions = {}): void => {
   const args = options.args ?? process.argv.slice(2);
+  const env = options.env ?? process.env;
   const projectRoot = resolve(options.projectRoot ?? process.cwd());
   const execute = options.execute ?? runCommand;
   const plan = parseMobilePackagingArgs(args, options.hostPlatform ?? process.platform);
-  const envOverrides = resolveMobileBuildEnv(options.env ?? process.env);
+  const envOverrides = resolveMobileBuildEnv(env);
 
   ensureTauriMobileProjects(plan.platforms, envOverrides, {
     execute,
@@ -55,6 +58,10 @@ export const packageMobile = (options: PackageMobileOptions = {}): void => {
   });
 
   if (plan.buildNative || plan.openProject) {
+    if (plan.buildNative && plan.platforms[0] === "android") {
+      (options.prepareAndroidReleaseSigning ?? prepareAndroidReleaseSigning)(projectRoot, env);
+    }
+
     execute("bun", getTauriMobileBuildArgs(plan.platforms[0], { openProject: plan.openProject }), {
       cwd: projectRoot,
       envOverrides,

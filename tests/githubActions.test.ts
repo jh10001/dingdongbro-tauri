@@ -18,6 +18,15 @@ describe("github actions workflow", () => {
       "macos-latest",
       "bun run build:desktop",
       "bun run package:mobile:android",
+      "Android (signed)",
+      "iOS (unsigned)",
+      "bun run package:mobile -- ios",
+      "xcodebuild archive",
+      "CODE_SIGNING_REQUIRED=NO",
+      "CODE_SIGNING_ALLOWED=NO",
+      "dingdongbro-desktop-${{ matrix.os }}",
+      "dingdongbro-android",
+      "dingdongbro-ios",
       "actions/upload-artifact@v4",
     ]) {
       expect(workflow).toContain(snippet);
@@ -30,10 +39,18 @@ describe("github actions workflow", () => {
     for (const snippet of [
       "actions/setup-java@v4",
       "android-actions/setup-android@v3",
+      "ANDROID_RELEASE_KEYSTORE_BASE64",
+      "ANDROID_RELEASE_KEYSTORE_PASSWORD",
+      "ANDROID_RELEASE_KEY_ALIAS",
+      "Validate Android signing secrets",
+      "set +o pipefail",
       "NDK_HOME",
       "aarch64-linux-android",
       "armv7-linux-androideabi",
       "x86_64-linux-android",
+      "aarch64-apple-ios",
+      "aarch64-apple-ios-sim",
+      "x86_64-apple-ios",
     ]) {
       expect(workflow).toContain(snippet);
     }
