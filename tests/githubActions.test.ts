@@ -12,22 +12,27 @@ describe("github actions workflow", () => {
 
     for (const snippet of [
       "name: build-native-shell",
+      'FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"',
       "workflow_dispatch:",
       "ubuntu-22.04",
       "windows-latest",
       "macos-latest",
+      "actions/checkout@v6",
       "bun run build:desktop",
       "bun run package:mobile:android",
       "Android (signed)",
       "iOS (unsigned)",
-      "bun run package:mobile -- ios",
+      "bun run open:mobile:ios",
+      "Timed out waiting for Tauri iOS bridge",
+      "TAURI_IOS_OPEN_PID",
+      "server-addr",
       "xcodebuild archive",
       "CODE_SIGNING_REQUIRED=NO",
       "CODE_SIGNING_ALLOWED=NO",
       "dingdongbro-desktop-${{ matrix.os }}",
       "dingdongbro-android",
       "dingdongbro-ios",
-      "actions/upload-artifact@v4",
+      "actions/upload-artifact@v5",
     ]) {
       expect(workflow).toContain(snippet);
     }
@@ -37,8 +42,9 @@ describe("github actions workflow", () => {
     const workflow = await readWorkflow();
 
     for (const snippet of [
-      "actions/setup-java@v4",
+      "actions/setup-java@v5",
       "android-actions/setup-android@v3",
+      "accept-android-sdk-licenses: false",
       "ANDROID_RELEASE_KEYSTORE_BASE64",
       "ANDROID_RELEASE_KEYSTORE_PASSWORD",
       "ANDROID_RELEASE_KEY_ALIAS",
