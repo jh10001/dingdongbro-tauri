@@ -31,13 +31,14 @@ describe("desktop shell build script", () => {
       sourceDir,
       outputDir,
       remoteUrl: "https://example.com/dingdong-survivors/",
+      runtime: "mobile",
       log: () => {},
     });
 
     await expect(readFile(join(outputDir, "index.html"), "utf8")).resolves.toContain("shell");
     await expect(readFile(join(outputDir, "assets", "logo.txt"), "utf8")).resolves.toBe("logo\n");
     await expect(readFile(join(outputDir, "shell-config.js"), "utf8")).resolves.toBe(
-      'window.__DINGDONG_REMOTE_URL__ = "https://example.com/dingdong-survivors/";\n',
+      'window.__DINGDONG_REMOTE_URL__ = "https://example.com/dingdong-survivors/?native_runtime=tauri-mobile";\n',
     );
   });
 });

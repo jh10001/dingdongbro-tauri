@@ -9,6 +9,7 @@
     "build:desktop": "bun scripts/package-desktop.ts",
     "package:mobile": "bun scripts/package-mobile.ts",
     "package:mobile:android": "bun scripts/package-mobile.ts android --build",
+    "package:mobile:android:arm64": "bun scripts/package-mobile.ts android --build -- --apk --target aarch64",
     "package:mobile:ios": "bun scripts/package-mobile.ts ios --build",
     "open:mobile:android": "bun scripts/package-mobile.ts android --open",
     "open:mobile:ios": "bun scripts/package-mobile.ts ios --open",

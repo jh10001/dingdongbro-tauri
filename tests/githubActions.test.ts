@@ -23,6 +23,7 @@ describe("github actions workflow", () => {
       "7z a -t7z -mx=9",
       "dingdongbro-desktop-windows-latest-portable.7z",
       "bun run package:mobile:android",
+      "bun run package:mobile:android:arm64",
       "Android (signed)",
       "iOS (unsigned)",
       "bun run open:mobile:ios",

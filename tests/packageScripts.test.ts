@@ -59,6 +59,7 @@ describe("tauri shell package scripts", () => {
   it("initializes a missing mobile project before building", () => {
     const { calls, execute } = createCommandRecorder();
     const signingCalls: Array<{ projectRoot: string; env: Record<string, string | undefined> }> = [];
+    const policyCalls: Array<{ platforms: string[]; projectRoot: string }> = [];
     const env = {
       [ANDROID_RELEASE_KEYSTORE_BASE64_ENV]: Buffer.from("fake-keystore", "utf8").toString("base64"),
       [ANDROID_RELEASE_KEYSTORE_PASSWORD_ENV]: "store-password",
@@ -74,10 +75,14 @@ describe("tauri shell package scripts", () => {
       prepareAndroidReleaseSigning: (projectRoot, signingEnv) => {
         signingCalls.push({ projectRoot, env: signingEnv });
       },
+      prepareMobileShellPolicy: (platforms, projectRoot) => {
+        policyCalls.push({ platforms, projectRoot });
+      },
       projectRoot: "/tmp/tauri-shell",
     });
 
     expect(signingCalls).toEqual([{ projectRoot: "/tmp/tauri-shell", env }]);
+    expect(policyCalls).toEqual([{ platforms: ["android"], projectRoot: "/tmp/tauri-shell" }]);
 
     expect(calls).toEqual([
       {
@@ -87,6 +92,18 @@ describe("tauri shell package scripts", () => {
           cwd: "/tmp/tauri-shell",
           envOverrides: {
             NATIVE_RELEASE_REMOTE_URL: "https://dingdongbro.272.chat/",
+            VITE_APP_RUNTIME: "mobile",
+          },
+        },
+      },
+      {
+        command: "bun",
+        args: ["tauri", "icon", "src-tauri/icons/icon.png", "--output", ".tmp/tauri-icons", "--ios-color", "#ffffff"],
+        options: {
+          cwd: "/tmp/tauri-shell",
+          envOverrides: {
+            NATIVE_RELEASE_REMOTE_URL: "https://dingdongbro.272.chat/",
+            VITE_APP_RUNTIME: "mobile",
           },
         },
       },
@@ -97,6 +114,7 @@ describe("tauri shell package scripts", () => {
           cwd: "/tmp/tauri-shell",
           envOverrides: {
             NATIVE_RELEASE_REMOTE_URL: "https://dingdongbro.272.chat/",
+            VITE_APP_RUNTIME: "mobile",
           },
         },
       },
@@ -106,6 +124,7 @@ describe("tauri shell package scripts", () => {
   it("skips mobile init when the generated project already exists", () => {
     const { calls, execute } = createCommandRecorder();
     const signingCalls: string[] = [];
+    const policyCalls: Array<{ platforms: string[]; projectRoot: string }> = [];
 
     packageMobile({
       args: ["android", "--build"],
@@ -120,12 +139,27 @@ describe("tauri shell package scripts", () => {
       prepareAndroidReleaseSigning: (projectRoot) => {
         signingCalls.push(projectRoot);
       },
+      prepareMobileShellPolicy: (platforms, projectRoot) => {
+        policyCalls.push({ platforms, projectRoot });
+      },
       projectRoot: "/tmp/tauri-shell",
     });
 
     expect(signingCalls).toEqual(["/tmp/tauri-shell"]);
+    expect(policyCalls).toEqual([{ platforms: ["android"], projectRoot: "/tmp/tauri-shell" }]);
 
     expect(calls).toEqual([
+      {
+        command: "bun",
+        args: ["tauri", "icon", "src-tauri/icons/icon.png", "--output", ".tmp/tauri-icons", "--ios-color", "#ffffff"],
+        options: {
+          cwd: "/tmp/tauri-shell",
+          envOverrides: {
+            NATIVE_RELEASE_REMOTE_URL: "https://dingdongbro.272.chat/",
+            VITE_APP_RUNTIME: "mobile",
+          },
+        },
+      },
       {
         command: "bun",
         args: ["tauri", "android", "build", "--ci"],
@@ -133,6 +167,56 @@ describe("tauri shell package scripts", () => {
           cwd: "/tmp/tauri-shell",
           envOverrides: {
             NATIVE_RELEASE_REMOTE_URL: "https://dingdongbro.272.chat/",
+            VITE_APP_RUNTIME: "mobile",
+          },
+        },
+      },
+    ]);
+  });
+
+  it("supports forwarding extra Tauri Android build args for ABI-specific APKs", () => {
+    const { calls, execute } = createCommandRecorder();
+    const policyCalls: Array<{ platforms: string[]; projectRoot: string }> = [];
+
+    packageMobile({
+      args: ["android", "--build", "--", "--apk", "--target", "aarch64"],
+      env: {
+        [ANDROID_RELEASE_KEYSTORE_BASE64_ENV]: Buffer.from("fake-keystore", "utf8").toString("base64"),
+        [ANDROID_RELEASE_KEYSTORE_PASSWORD_ENV]: "store-password",
+        [ANDROID_RELEASE_KEY_ALIAS_ENV]: "upload",
+      },
+      execute,
+      hostPlatform: "linux",
+      pathExists: () => true,
+      prepareAndroidReleaseSigning: () => undefined,
+      prepareMobileShellPolicy: (platforms, projectRoot) => {
+        policyCalls.push({ platforms, projectRoot });
+      },
+      projectRoot: "/tmp/tauri-shell",
+    });
+
+    expect(policyCalls).toEqual([{ platforms: ["android"], projectRoot: "/tmp/tauri-shell" }]);
+
+    expect(calls).toEqual([
+      {
+        command: "bun",
+        args: ["tauri", "icon", "src-tauri/icons/icon.png", "--output", ".tmp/tauri-icons", "--ios-color", "#ffffff"],
+        options: {
+          cwd: "/tmp/tauri-shell",
+          envOverrides: {
+            NATIVE_RELEASE_REMOTE_URL: "https://dingdongbro.272.chat/",
+            VITE_APP_RUNTIME: "mobile",
+          },
+        },
+      },
+      {
+        command: "bun",
+        args: ["tauri", "android", "build", "--ci", "--apk", "--target", "aarch64"],
+        options: {
+          cwd: "/tmp/tauri-shell",
+          envOverrides: {
+            NATIVE_RELEASE_REMOTE_URL: "https://dingdongbro.272.chat/",
+            VITE_APP_RUNTIME: "mobile",
           },
         },
       },

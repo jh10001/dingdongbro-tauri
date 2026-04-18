@@ -7,11 +7,18 @@ export const NATIVE_RELEASE_REMOTE_URL_ENV = "NATIVE_RELEASE_REMOTE_URL";
 export const DEFAULT_NATIVE_RELEASE_REMOTE_URL = "https://dingdongbro.272.chat/";
 export const DESKTOP_TAURI_SHELL_OUTPUT_DIR = resolve(process.cwd(), "build", "desktop-shell");
 export const DESKTOP_TAURI_SHELL_CONFIG_FILE = "shell-config.js";
+export const MOBILE_TAURI_ICON_INPUT = "src-tauri/icons/icon.png";
+export const MOBILE_TAURI_ICON_OUTPUT_DIR = ".tmp/tauri-icons";
+export const MOBILE_TAURI_IOS_ICON_BACKGROUND = "#ffffff";
+export const NATIVE_SHELL_RUNTIME_QUERY_PARAM = "native_runtime";
+export const DESKTOP_NATIVE_SHELL_RUNTIME = "tauri-desktop";
+export const MOBILE_NATIVE_SHELL_RUNTIME = "tauri-mobile";
 
 export interface MobilePackagingPlan {
   buildNative: boolean;
   openProject: boolean;
   platforms: MobilePlatform[];
+  tauriBuildArgs: string[];
 }
 
 const createNativeHostedShellBuildEnv = (
@@ -19,7 +26,7 @@ const createNativeHostedShellBuildEnv = (
   runtime: "desktop" | "mobile",
 ): Record<string, string> => ({
   [NATIVE_RELEASE_REMOTE_URL_ENV]: resolveNativeReleaseRemoteUrl(env),
-  ...(runtime === "desktop" ? { VITE_APP_RUNTIME: "desktop" } : {}),
+  VITE_APP_RUNTIME: runtime,
 });
 
 const VALID_PLATFORMS = new Set<MobilePlatform>(["android", "ios"]);
@@ -70,9 +77,15 @@ export const resolveNativeReleaseRemoteUrl = (
   return parsed.toString();
 };
 
-export const createDesktopShellConfigSource = (remoteUrl: string): string => [
+export const appendNativeShellRuntimeQuery = (remoteUrl: string, shellRuntime: string): string => {
+  const parsed = new URL(remoteUrl);
+  parsed.searchParams.set(NATIVE_SHELL_RUNTIME_QUERY_PARAM, shellRuntime);
+  return parsed.toString();
+};
+
+export const createDesktopShellConfigSource = (remoteUrl: string, shellRuntime: string): string => [
   "window.__DINGDONG_REMOTE_URL__ = ",
-  JSON.stringify(remoteUrl),
+  JSON.stringify(appendNativeShellRuntimeQuery(remoteUrl, shellRuntime)),
   ";\n",
 ].join("");
 
@@ -119,26 +132,40 @@ export const getTauriMobileInitArgs = (platform: MobilePlatform): string[] => [
 
 export const getTauriMobileBuildArgs = (
   platform: MobilePlatform,
-  options: { openProject?: boolean } = {},
+  options: { extraArgs?: string[]; openProject?: boolean } = {},
 ): string[] => [
   "tauri",
   platform,
   "build",
   ...(options.openProject ? ["--open"] : []),
   "--ci",
+  ...(options.extraArgs ?? []),
+];
+
+export const getTauriMobileIconArgs = (): string[] => [
+  "tauri",
+  "icon",
+  MOBILE_TAURI_ICON_INPUT,
+  "--output",
+  MOBILE_TAURI_ICON_OUTPUT_DIR,
+  "--ios-color",
+  MOBILE_TAURI_IOS_ICON_BACKGROUND,
 ];
 
 export const parseMobilePackagingArgs = (
   args: string[],
   hostPlatform: string = process.platform,
 ): MobilePackagingPlan => {
-  const requestedFlags = args.filter((arg) => arg.startsWith("--"));
+  const passthroughIndex = args.indexOf("--");
+  const workflowArgs = passthroughIndex === -1 ? args : args.slice(0, passthroughIndex);
+  const tauriBuildArgs = passthroughIndex === -1 ? [] : args.slice(passthroughIndex + 1);
+  const requestedFlags = workflowArgs.filter((arg) => arg.startsWith("--"));
   if (!requestedFlags.every((flag) => VALID_FLAGS.has(flag))) {
     throw new Error(`Unsupported mobile packaging flag: ${requestedFlags.join(", ")}`);
   }
 
   const flags = new Set(requestedFlags);
-  const requestedPlatforms = args.filter((arg) => !arg.startsWith("--"));
+  const requestedPlatforms = workflowArgs.filter((arg) => !arg.startsWith("--"));
 
   if (!requestedPlatforms.every(isMobilePlatform)) {
     throw new Error(`Unsupported mobile packaging platform: ${requestedPlatforms.join(", ")}`);
@@ -166,5 +193,6 @@ export const parseMobilePackagingArgs = (
     buildNative,
     openProject,
     platforms,
+    tauriBuildArgs,
   };
 };
