@@ -12,6 +12,7 @@ on:
       - master
 
 env:
+  BUN_VERSION: "1.3.8"
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"
   NATIVE_RELEASE_REMOTE_URL: https://dingdongbro.272.chat/
 
@@ -29,7 +30,18 @@ jobs:
       - name: Setup Bun
         uses: oven-sh/setup-bun@v2
         with:
-          bun-version: 1.3.8
+          bun-version: ${{ env.BUN_VERSION }}
+
+      - name: Restore Bun dependency cache
+        uses: actions/cache@v5
+        with:
+          path: |
+            ~/.bun/install/cache
+            node_modules
+          key: ${{ runner.os }}-bun-${{ env.BUN_VERSION }}-${{ hashFiles('bun.lock', 'package.json') }}
+          restore-keys: |
+            ${{ runner.os }}-bun-${{ env.BUN_VERSION }}-
+            ${{ runner.os }}-bun-
 
       - name: Install dependencies
         run: bun install --frozen-lockfile
@@ -55,7 +67,18 @@ jobs:
       - name: Setup Bun
         uses: oven-sh/setup-bun@v2
         with:
-          bun-version: 1.3.8
+          bun-version: ${{ env.BUN_VERSION }}
+
+      - name: Restore Bun dependency cache
+        uses: actions/cache@v5
+        with:
+          path: |
+            ~/.bun/install/cache
+            node_modules
+          key: ${{ runner.os }}-bun-${{ env.BUN_VERSION }}-${{ hashFiles('bun.lock', 'package.json') }}
+          restore-keys: |
+            ${{ runner.os }}-bun-${{ env.BUN_VERSION }}-
+            ${{ runner.os }}-bun-
 
       - name: Install Linux desktop dependencies
         if: runner.os == 'Linux'
@@ -76,6 +99,15 @@ jobs:
         uses: swatinem/rust-cache@v2
         with:
           workspaces: ./src-tauri -> src-tauri/target
+
+      - name: Cache downloaded Tauri Windows tooling
+        if: runner.os == 'Windows'
+        uses: actions/cache@v5
+        with:
+          path: ~/AppData/Local/tauri
+          key: windows-tauri-tools-${{ hashFiles('bun.lock', 'package.json') }}
+          restore-keys: |
+            windows-tauri-tools-
 
       - name: Install dependencies
         run: bun install --frozen-lockfile
@@ -129,7 +161,18 @@ jobs:
       - name: Setup Bun
         uses: oven-sh/setup-bun@v2
         with:
-          bun-version: 1.3.8
+          bun-version: ${{ env.BUN_VERSION }}
+
+      - name: Restore Bun dependency cache
+        uses: actions/cache@v5
+        with:
+          path: |
+            ~/.bun/install/cache
+            node_modules
+          key: ${{ runner.os }}-bun-${{ env.BUN_VERSION }}-${{ hashFiles('bun.lock', 'package.json') }}
+          restore-keys: |
+            ${{ runner.os }}-bun-${{ env.BUN_VERSION }}-
+            ${{ runner.os }}-bun-
 
       - name: Setup Java
         uses: actions/setup-java@v5
@@ -230,7 +273,18 @@ jobs:
       - name: Setup Bun
         uses: oven-sh/setup-bun@v2
         with:
-          bun-version: 1.3.8
+          bun-version: ${{ env.BUN_VERSION }}
+
+      - name: Restore Bun dependency cache
+        uses: actions/cache@v5
+        with:
+          path: |
+            ~/.bun/install/cache
+            node_modules
+          key: ${{ runner.os }}-bun-${{ env.BUN_VERSION }}-${{ hashFiles('bun.lock', 'package.json') }}
+          restore-keys: |
+            ${{ runner.os }}-bun-${{ env.BUN_VERSION }}-
+            ${{ runner.os }}-bun-
 
       - name: Install Rust stable with iOS targets
         uses: dtolnay/rust-toolchain@stable
