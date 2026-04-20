@@ -246,10 +246,6 @@ jobs:
             src-tauri/gen/android/**/gradle.properties
             src-tauri/gen/android/**/gradle/libs.versions.toml
 
-      # This job uses an upload keystore provided through GitHub secrets, not the Play App Signing key.
-      - name: Build Android shell
-        run: bun run package:mobile:android
-
       - name: Build Android ARM64 APK
         run: bun run package:mobile:android:arm64
 
