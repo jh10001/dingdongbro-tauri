@@ -60,6 +60,7 @@ const SAMPLE_INFO_PLIST = `<?xml version="1.0" encoding="UTF-8"?>
 </dict>
 </plist>
 `;
+const SAMPLE_INFO_PLIST_LOCALIZATION = '"CFBundleDisplayName" = "叮咚兄弟";\n';
 
 afterEach(async () => {
   await Promise.all(tempDirs.splice(0).map((dir) => rm(dir, { recursive: true, force: true })));
@@ -81,7 +82,10 @@ describe("mobile shell policy helpers", () => {
   });
 
   it("patches iOS Info.plist for landscape fullscreen mobile shells and display name", () => {
-    const infoPlist = ensureIosInfoPlistLandscapeFullscreen(SAMPLE_INFO_PLIST, "叮咚兄弟");
+    const infoPlist = ensureIosInfoPlistLandscapeFullscreen(SAMPLE_INFO_PLIST, {
+      bundleName: "DingDongBro",
+      displayName: "叮咚兄弟",
+    });
 
     expect(infoPlist).toContain("UISupportedInterfaceOrientations");
     expect(infoPlist).toContain("UIInterfaceOrientationLandscapeLeft");
@@ -90,21 +94,28 @@ describe("mobile shell policy helpers", () => {
     expect(infoPlist).toContain("UIStatusBarHidden");
     expect(infoPlist).toContain("CFBundleDisplayName");
     expect(infoPlist).toContain("叮咚兄弟");
+    expect(infoPlist).toContain("<key>CFBundleName</key>");
+    expect(infoPlist).toContain("DingDongBro");
   });
 
-  it("rewrites generated Android and iOS projects in place with platform-specific display names", async () => {
+  it("rewrites generated Android and iOS projects in place with platform-specific names and iOS title localizations", async () => {
     const projectRoot = await createTempDir("dingdong-mobile-policy-");
     const androidValuesDir = join(projectRoot, "src-tauri", "gen", "android", "app", "src", "main", "res", "values");
     const androidManifestDir = join(projectRoot, "src-tauri", "gen", "android", "app", "src", "main");
     const androidKotlinDir = join(projectRoot, "src-tauri", "gen", "android", "app", "src", "main", "java", "com", "dingdongbro", "game");
     const iosAppDir = join(projectRoot, "src-tauri", "gen", "apple", "DingDongBro", "DingDongBro_iOS");
+    const iosZhHansDir = join(projectRoot, "src-tauri", "zh-Hans.lproj");
+    const iosZhHantDir = join(projectRoot, "src-tauri", "zh-Hant.lproj");
     const tauriConfigPath = join(projectRoot, "src-tauri", "tauri.conf.json");
     const tauriIosConfigPath = join(projectRoot, "src-tauri", "tauri.ios.conf.json");
+    const infoIosPlistPath = join(projectRoot, "src-tauri", "Info.ios.plist");
 
     await mkdir(androidValuesDir, { recursive: true });
     await mkdir(androidManifestDir, { recursive: true });
     await mkdir(androidKotlinDir, { recursive: true });
     await mkdir(iosAppDir, { recursive: true });
+    await mkdir(iosZhHansDir, { recursive: true });
+    await mkdir(iosZhHantDir, { recursive: true });
     await writeFile(join(androidManifestDir, "AndroidManifest.xml"), SAMPLE_ANDROID_MANIFEST, "utf8");
     await writeFile(join(androidValuesDir, "styles.xml"), SAMPLE_ANDROID_STYLES, "utf8");
     await writeFile(join(androidValuesDir, "strings.xml"), SAMPLE_ANDROID_STRINGS, "utf8");
@@ -112,6 +123,21 @@ describe("mobile shell policy helpers", () => {
     await writeFile(join(iosAppDir, "Info.plist"), SAMPLE_INFO_PLIST, "utf8");
     await writeFile(tauriConfigPath, JSON.stringify({ productName: "叮咚兄弟" }, null, 2), "utf8");
     await writeFile(tauriIosConfigPath, JSON.stringify({ productName: "DingDongBro" }, null, 2), "utf8");
+    await writeFile(infoIosPlistPath, [
+      "<?xml version=\"1.0\" encoding=\"UTF-8\"?>",
+      "<!DOCTYPE plist PUBLIC \"-//Apple//DTD PLIST 1.0//EN\" \"http://www.apple.com/DTDs/PropertyList-1.0.dtd\">",
+      "<plist version=\"1.0\">",
+      "<dict>",
+      "\t<key>CFBundleDisplayName</key>",
+      "\t<string>DingDongBro</string>",
+      "\t<key>CFBundleName</key>",
+      "\t<string>DingDongBro</string>",
+      "</dict>",
+      "</plist>",
+      "",
+    ].join("\n"), "utf8");
+    await writeFile(join(iosZhHansDir, "InfoPlist.strings"), SAMPLE_INFO_PLIST_LOCALIZATION, "utf8");
+    await writeFile(join(iosZhHantDir, "InfoPlist.strings"), SAMPLE_INFO_PLIST_LOCALIZATION, "utf8");
 
     prepareMobileShellPolicy(["android", "ios"], projectRoot);
 
@@ -132,6 +158,18 @@ describe("mobile shell policy helpers", () => {
     );
     await expect(readFile(join(iosAppDir, "Info.plist"), "utf8")).resolves.toContain(
       "DingDongBro",
+    );
+    await expect(readFile(join(iosAppDir, "Info.plist"), "utf8")).resolves.toContain(
+      "<key>CFBundleName</key>",
+    );
+    await expect(readFile(join(iosAppDir, "Info.plist"), "utf8")).resolves.toContain(
+      "DingDongBro",
+    );
+    await expect(readFile(join(iosAppDir, "zh-Hans.lproj", "InfoPlist.strings"), "utf8")).resolves.toBe(
+      SAMPLE_INFO_PLIST_LOCALIZATION,
+    );
+    await expect(readFile(join(iosAppDir, "zh-Hant.lproj", "InfoPlist.strings"), "utf8")).resolves.toBe(
+      SAMPLE_INFO_PLIST_LOCALIZATION,
     );
   });
 });

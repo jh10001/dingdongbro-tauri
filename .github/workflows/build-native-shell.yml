@@ -326,6 +326,8 @@ jobs:
           fi
 
           APP_NAME="$(basename "$XCODE_PROJECT" .xcodeproj)"
+          echo "TAURI_IOS_APP_NAME=$APP_NAME" >> "$GITHUB_ENV"
+          echo "TAURI_IOS_ARCHIVE_PATH=src-tauri/gen/apple/build/${APP_NAME}.xcarchive" >> "$GITHUB_ENV"
           xcodebuild archive \
             -project "$XCODE_PROJECT" \
             -scheme "${APP_NAME}_iOS" \
@@ -334,6 +336,25 @@ jobs:
             -configuration Release \
             CODE_SIGNING_REQUIRED=NO \
             CODE_SIGNING_ALLOWED=NO
+
+      - name: Package unsigned iOS IPA
+        shell: bash
+        run: |
+          APP_NAME="${TAURI_IOS_APP_NAME:?Missing archived iOS app name}"
+          ARCHIVE_PATH="${TAURI_IOS_ARCHIVE_PATH:?Missing archived iOS path}"
+          APP_PATH="${ARCHIVE_PATH}/Products/Applications/${APP_NAME}.app"
+          IPA_PATH="src-tauri/gen/apple/build/${APP_NAME}-unsigned.ipa"
+
+          if [ ! -d "$APP_PATH" ]; then
+            echo "Missing archived app bundle at $APP_PATH" >&2
+            exit 1
+          fi
+
+          PAYLOAD_ROOT="$(mktemp -d)"
+          mkdir -p "${PAYLOAD_ROOT}/Payload"
+          cp -R "$APP_PATH" "${PAYLOAD_ROOT}/Payload/"
+          rm -f "$IPA_PATH"
+          ditto -c -k --sequesterRsrc --keepParent "${PAYLOAD_ROOT}/Payload" "$IPA_PATH"
 
       - name: Show Tauri iOS bridge log on failure
         if: failure()
@@ -347,6 +368,7 @@ jobs:
           path: |
             src-tauri/gen/apple/build/**/*.xcarchive
             src-tauri/gen/apple/build/**/*.app
+            src-tauri/gen/apple/build/**/*.ipa
           if-no-files-found: error
 
       - name: Stop Tauri iOS bridge

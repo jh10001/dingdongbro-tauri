@@ -47,11 +47,22 @@ describe("tauri shell project metadata", () => {
       mainBinaryName?: string;
     }>("../src-tauri/tauri.ios.conf.json");
     const iosInfoPlist = await readFile(new URL("../src-tauri/Info.ios.plist", import.meta.url), "utf8");
+    const iosZhHansInfoPlistStrings = await readFile(
+      new URL("../src-tauri/zh-Hans.lproj/InfoPlist.strings", import.meta.url),
+      "utf8",
+    );
+    const iosZhHantInfoPlistStrings = await readFile(
+      new URL("../src-tauri/zh-Hant.lproj/InfoPlist.strings", import.meta.url),
+      "utf8",
+    );
 
     expect(iosConfig.productName).toBe("DingDongBro");
     expect(iosConfig.mainBinaryName).toBe("DingDongBro");
     expect(iosInfoPlist).toContain("<key>CFBundleDisplayName</key>");
     expect(iosInfoPlist).toContain("<string>DingDongBro</string>");
     expect(iosInfoPlist).toContain("<key>CFBundleName</key>");
+    expect(iosInfoPlist).toContain("<string>DingDongBro</string>");
+    expect(iosZhHansInfoPlistStrings).toContain('"CFBundleDisplayName" = "叮咚兄弟";');
+    expect(iosZhHantInfoPlistStrings).toContain('"CFBundleDisplayName" = "叮咚兄弟";');
   });
 });

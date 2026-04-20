@@ -1,5 +1,5 @@
-import { existsSync, readdirSync, readFileSync, statSync, writeFileSync } from "node:fs";
-import { join, resolve } from "node:path";
+import { cpSync, existsSync, readdirSync, readFileSync, statSync, writeFileSync } from "node:fs";
+import { basename, dirname, join, resolve } from "node:path";
 
 import { resolveTauriMobileProjectDir, type MobilePlatform } from "./nativePackaging";
 
@@ -10,6 +10,8 @@ const IOS_ORIENTATION_VALUES = [
   "UIInterfaceOrientationLandscapeLeft",
   "UIInterfaceOrientationLandscapeRight",
 ] as const;
+const IOS_LOCALIZATION_DIR_SUFFIX = ".lproj";
+const IOS_INFO_PLIST_STRINGS_FILE_NAME = "InfoPlist.strings";
 const ANDROID_FULLSCREEN_STYLE_ITEM_PATTERN = /\s*<item name="android:windowFullscreen">[^<]*<\/item>\s*/g;
 const ANDROID_IMMERSIVE_MARKER = "hide(WindowInsetsCompat.Type.systemBars())";
 
@@ -238,7 +240,7 @@ const upsertPlistString = (source: string, key: string, value: string): string =
   return source.replace(/<\/dict>/, `\t${replacement}\n</dict>`);
 };
 
-const readConfiguredDisplayName = (
+const readConfiguredProductName = (
   projectRoot: string,
   platform?: MobilePlatform,
 ): string => {
@@ -265,6 +267,65 @@ const readConfiguredDisplayName = (
   }
 
   return config.productName;
+};
+
+const readInfoPlistString = (source: string, key: string): string | null => {
+  const match = source.match(new RegExp(`<key>${key}<\\/key>\\s*<string>([\\s\\S]*?)<\\/string>`));
+  return match?.[1]?.trim() || null;
+};
+
+const readConfiguredIosNames = (
+  projectRoot: string,
+): {
+  bundleName: string;
+  displayName: string;
+} => {
+  const bundleName = readConfiguredProductName(projectRoot, "ios");
+  const infoPlistPath = resolve(projectRoot, "src-tauri", "Info.ios.plist");
+
+  if (!existsSync(infoPlistPath)) {
+    return {
+      bundleName,
+      displayName: bundleName,
+    };
+  }
+
+  const infoPlistSource = readFileSync(infoPlistPath, "utf8");
+  return {
+    bundleName: readInfoPlistString(infoPlistSource, "CFBundleName") ?? bundleName,
+    displayName: readInfoPlistString(infoPlistSource, "CFBundleDisplayName") ?? bundleName,
+  };
+};
+
+const collectIosInfoPlistLocalizationDirs = (projectRoot: string): string[] => {
+  const srcTauriDir = resolve(projectRoot, "src-tauri");
+  if (!existsSync(srcTauriDir)) {
+    return [];
+  }
+
+  return readdirSync(srcTauriDir)
+    .map((entry) => join(srcTauriDir, entry))
+    .filter((entryPath) => (
+      statSync(entryPath).isDirectory()
+      && entryPath.endsWith(IOS_LOCALIZATION_DIR_SUFFIX)
+      && existsSync(join(entryPath, IOS_INFO_PLIST_STRINGS_FILE_NAME))
+    ));
+};
+
+const syncIosInfoPlistLocalizations = (projectRoot: string, iosAppDirs: string[]): void => {
+  const localizationDirs = collectIosInfoPlistLocalizationDirs(projectRoot);
+  if (localizationDirs.length === 0 || iosAppDirs.length === 0) {
+    return;
+  }
+
+  for (const iosAppDir of iosAppDirs) {
+    for (const localizationDir of localizationDirs) {
+      cpSync(localizationDir, join(iosAppDir, basename(localizationDir)), {
+        force: true,
+        recursive: true,
+      });
+    }
+  }
 };
 
 export const ensureAndroidManifestLandscape = (source: string): string => {
@@ -341,14 +402,20 @@ const upsertPlistArray = (source: string, key: string, values: readonly string[]
   return source.replace(/<\/dict>/, `${replacement}\n</dict>`);
 };
 
-export const ensureIosInfoPlistLandscapeFullscreen = (source: string, displayName: string): string => {
+export const ensureIosInfoPlistLandscapeFullscreen = (
+  source: string,
+  names: {
+    bundleName: string;
+    displayName: string;
+  },
+): string => {
   let nextSource = upsertPlistArray(source, "UISupportedInterfaceOrientations", IOS_ORIENTATION_VALUES);
   nextSource = upsertPlistArray(nextSource, "UISupportedInterfaceOrientations~ipad", IOS_ORIENTATION_VALUES);
   nextSource = upsertPlistBoolean(nextSource, "UIRequiresFullScreen", true);
   nextSource = upsertPlistBoolean(nextSource, "UIStatusBarHidden", true);
   nextSource = upsertPlistBoolean(nextSource, "UIViewControllerBasedStatusBarAppearance", false);
-  nextSource = upsertPlistString(nextSource, "CFBundleDisplayName", displayName);
-  nextSource = upsertPlistString(nextSource, "CFBundleName", displayName);
+  nextSource = upsertPlistString(nextSource, "CFBundleDisplayName", names.displayName);
+  nextSource = upsertPlistString(nextSource, "CFBundleName", names.bundleName);
   return nextSource;
 };
 
@@ -357,7 +424,7 @@ export const prepareMobileShellPolicy = (
   projectRoot: string = process.cwd(),
 ): void => {
   if (platforms.includes("android")) {
-    const displayName = readConfiguredDisplayName(projectRoot, "android");
+    const displayName = readConfiguredProductName(projectRoot, "android");
     const androidProjectDir = resolveTauriMobileProjectDir("android", projectRoot);
     const manifestPath = preferProjectFile(
       collectFilesByName(androidProjectDir, "AndroidManifest.xml"),
@@ -393,7 +460,7 @@ export const prepareMobileShellPolicy = (
   }
 
   if (platforms.includes("ios")) {
-    const displayName = readConfiguredDisplayName(projectRoot, "ios");
+    const names = readConfiguredIosNames(projectRoot);
     const iosProjectDir = resolveTauriMobileProjectDir("ios", projectRoot);
     const infoPlistPaths = collectFilesByName(iosProjectDir, "Info.plist")
       .filter((filePath) => !filePath.includes(`${resolve(iosProjectDir, "Pods")}`));
@@ -402,10 +469,17 @@ export const prepareMobileShellPolicy = (
       throw new Error("iOS mobile shell policy requires at least one generated Info.plist after tauri ios init.");
     }
 
+    const iosAppDirs = [...new Set(
+      infoPlistPaths
+        .map((filePath) => dirname(filePath))
+        .filter((dirPath) => basename(dirPath).endsWith("_iOS")),
+    )];
+    syncIosInfoPlistLocalizations(projectRoot, iosAppDirs);
+
     for (const infoPlistPath of infoPlistPaths) {
       writeFileSync(
         infoPlistPath,
-        ensureIosInfoPlistLandscapeFullscreen(readFileSync(infoPlistPath, "utf8"), displayName),
+        ensureIosInfoPlistLandscapeFullscreen(readFileSync(infoPlistPath, "utf8"), names),
         "utf8",
       );
     }
