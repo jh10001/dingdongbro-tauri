@@ -14,7 +14,6 @@ import {
   getTauriMobileBuildArgs,
   getTauriMobileInitArgs,
   MOBILE_TAURI_ICON_INPUT,
-  MOBILE_TAURI_ICON_OUTPUT_DIR,
   MOBILE_TAURI_IOS_ICON_BACKGROUND,
   MOBILE_NATIVE_SHELL_RUNTIME,
   NATIVE_RELEASE_REMOTE_URL_ENV,
@@ -89,8 +88,6 @@ describe("native packaging helpers", () => {
       "tauri",
       "icon",
       MOBILE_TAURI_ICON_INPUT,
-      "--output",
-      MOBILE_TAURI_ICON_OUTPUT_DIR,
       "--ios-color",
       MOBILE_TAURI_IOS_ICON_BACKGROUND,
     ]);

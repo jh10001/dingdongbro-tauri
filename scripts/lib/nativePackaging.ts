@@ -8,7 +8,6 @@ export const DEFAULT_NATIVE_RELEASE_REMOTE_URL = "https://dingdongbro.272.chat/"
 export const DESKTOP_TAURI_SHELL_OUTPUT_DIR = resolve(process.cwd(), "build", "desktop-shell");
 export const DESKTOP_TAURI_SHELL_CONFIG_FILE = "shell-config.js";
 export const MOBILE_TAURI_ICON_INPUT = "src-tauri/icons/icon.png";
-export const MOBILE_TAURI_ICON_OUTPUT_DIR = ".tmp/tauri-icons";
 export const MOBILE_TAURI_IOS_ICON_BACKGROUND = "#ffffff";
 export const NATIVE_SHELL_RUNTIME_QUERY_PARAM = "native_runtime";
 export const DESKTOP_NATIVE_SHELL_RUNTIME = "tauri-desktop";
@@ -146,8 +145,6 @@ export const getTauriMobileIconArgs = (): string[] => [
   "tauri",
   "icon",
   MOBILE_TAURI_ICON_INPUT,
-  "--output",
-  MOBILE_TAURI_ICON_OUTPUT_DIR,
   "--ios-color",
   MOBILE_TAURI_IOS_ICON_BACKGROUND,
 ];

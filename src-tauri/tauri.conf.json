@@ -1,6 +1,6 @@
 {
   "$schema": "../node_modules/@tauri-apps/cli/config.schema.json",
-  "productName": "DingDongBro",
+  "productName": "叮咚兄弟",
   "version": "0.3.2",
   "identifier": "com.dingdongbro.game",
   "build": {
@@ -11,7 +11,7 @@
   "app": {
     "windows": [
       {
-        "title": "DingDongBro",
+        "title": "叮咚兄弟",
         "width": 1280,
         "height": 720,
         "resizable": true,

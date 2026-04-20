@@ -28,4 +28,14 @@ describe("tauri shell project metadata", () => {
 
     expect(shellPackage.devDependencies?.["@tauri-apps/cli"]).toBe("2.10.1");
   });
+
+  it("uses the requested Chinese product and window title for the shell app", async () => {
+    const tauriConfig = await readJson<{
+      productName?: string;
+      app?: { windows?: Array<{ title?: string }> };
+    }>("../src-tauri/tauri.conf.json");
+
+    expect(tauriConfig.productName).toBe("叮咚兄弟");
+    expect(tauriConfig.app?.windows?.[0]?.title).toBe("叮咚兄弟");
+  });
 });

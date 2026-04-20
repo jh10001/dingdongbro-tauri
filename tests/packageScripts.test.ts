@@ -98,7 +98,7 @@ describe("tauri shell package scripts", () => {
       },
       {
         command: "bun",
-        args: ["tauri", "icon", "src-tauri/icons/icon.png", "--output", ".tmp/tauri-icons", "--ios-color", "#ffffff"],
+        args: ["tauri", "icon", "src-tauri/icons/icon.png", "--ios-color", "#ffffff"],
         options: {
           cwd: "/tmp/tauri-shell",
           envOverrides: {
@@ -151,7 +151,7 @@ describe("tauri shell package scripts", () => {
     expect(calls).toEqual([
       {
         command: "bun",
-        args: ["tauri", "icon", "src-tauri/icons/icon.png", "--output", ".tmp/tauri-icons", "--ios-color", "#ffffff"],
+        args: ["tauri", "icon", "src-tauri/icons/icon.png", "--ios-color", "#ffffff"],
         options: {
           cwd: "/tmp/tauri-shell",
           envOverrides: {
@@ -200,7 +200,7 @@ describe("tauri shell package scripts", () => {
     expect(calls).toEqual([
       {
         command: "bun",
-        args: ["tauri", "icon", "src-tauri/icons/icon.png", "--output", ".tmp/tauri-icons", "--ios-color", "#ffffff"],
+        args: ["tauri", "icon", "src-tauri/icons/icon.png", "--ios-color", "#ffffff"],
         options: {
           cwd: "/tmp/tauri-shell",
           envOverrides: {

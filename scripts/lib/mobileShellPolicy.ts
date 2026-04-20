@@ -5,12 +5,13 @@ import { resolveTauriMobileProjectDir, type MobilePlatform } from "./nativePacka
 
 const ANDROID_MAIN_ACTIVITY_NAME = "MainActivity";
 const ANDROID_SCREEN_ORIENTATION = 'android:screenOrientation="sensorLandscape"';
-const ANDROID_FULLSCREEN_STYLE_ITEM = '<item name="android:windowFullscreen">true</item>';
 const ANDROID_CUTOUT_STYLE_ITEM = '<item name="android:windowLayoutInDisplayCutoutMode">shortEdges</item>';
 const IOS_ORIENTATION_VALUES = [
   "UIInterfaceOrientationLandscapeLeft",
   "UIInterfaceOrientationLandscapeRight",
 ] as const;
+const ANDROID_FULLSCREEN_STYLE_ITEM_PATTERN = /\s*<item name="android:windowFullscreen">[^<]*<\/item>\s*/g;
+const ANDROID_IMMERSIVE_MARKER = "hide(WindowInsetsCompat.Type.systemBars())";
 
 const collectFilesByName = (rootDir: string, fileName: string, results: string[] = []): string[] => {
   if (!existsSync(rootDir)) {
@@ -46,6 +47,208 @@ const replaceOrInsertAttribute = (tagSource: string, attributePattern: RegExp, a
   return tagSource.replace(/>$/, ` ${attributeSource}>`);
 };
 
+const ensureImportsAfterPackage = (source: string, imports: readonly string[]): string => {
+  const presentImports = imports.filter((entry) => source.includes(`${entry}\n`) || source.includes(`${entry}\r\n`));
+  const missingImports = imports.filter((entry) => !presentImports.includes(entry));
+
+  if (missingImports.length === 0) {
+    return source;
+  }
+
+  const lines = source.split(/\r?\n/);
+  const lastImportIndex = lines.reduce((acc, line, index) => (line.startsWith("import ") ? index : acc), -1);
+  const packageIndex = lines.findIndex((line) => line.startsWith("package "));
+  const insertAt = lastImportIndex >= 0 ? lastImportIndex + 1 : packageIndex >= 0 ? packageIndex + 1 : 0;
+
+  const importsToInsert = [
+    ...(insertAt > 0 && lines[insertAt - 1] !== "" ? [""] : []),
+    ...missingImports,
+    "",
+  ];
+
+  lines.splice(insertAt, 0, ...importsToInsert);
+  return lines.join("\n").replace(/\n{3,}/g, "\n\n");
+};
+
+const escapeAndroidStringValue = (value: string): string => value
+  .replace(/\\/g, "\\\\")
+  .replace(/'/g, "\\'")
+  .replace(/"/g, '\\"')
+  .replace(/&/g, "&amp;")
+  .replace(/</g, "&lt;")
+  .replace(/>/g, "&gt;");
+
+const upsertAndroidString = (source: string, key: string, value: string): string => {
+  const escapedValue = escapeAndroidStringValue(value);
+  const entryPattern = new RegExp(`<string\\s+name="${key}">[\\s\\S]*?<\\/string>`);
+  const replacement = `  <string name="${key}">${escapedValue}</string>`;
+
+  if (entryPattern.test(source)) {
+    return source.replace(entryPattern, replacement);
+  }
+
+  return source.replace(/<\/resources>/, `${replacement}\n</resources>`);
+};
+
+const insertBeforeClosingBrace = (source: string, blockSource: string): string => {
+  const lastBraceIndex = source.lastIndexOf("}");
+  if (lastBraceIndex === -1) {
+    throw new Error("Android MainActivity source is missing a class closing brace.");
+  }
+
+  return `${source.slice(0, lastBraceIndex).trimEnd()}\n\n${blockSource}\n${source.slice(lastBraceIndex)}`;
+};
+
+const ensureKotlinMainActivityImmersiveFullscreen = (source: string): string => {
+  if (source.includes(ANDROID_IMMERSIVE_MARKER)) {
+    return ensureImportsAfterPackage(source, [
+      "import android.os.Bundle",
+      "import androidx.core.view.WindowCompat",
+      "import androidx.core.view.WindowInsetsCompat",
+      "import androidx.core.view.WindowInsetsControllerCompat",
+    ]);
+  }
+
+  let nextSource = ensureImportsAfterPackage(source, [
+    "import android.os.Bundle",
+    "import androidx.core.view.WindowCompat",
+    "import androidx.core.view.WindowInsetsCompat",
+    "import androidx.core.view.WindowInsetsControllerCompat",
+  ]);
+
+  const helperSource = [
+    "  private fun applyImmersiveFullscreen() {",
+    "    WindowCompat.getInsetsController(window, window.decorView).apply {",
+    "      systemBarsBehavior = WindowInsetsControllerCompat.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE",
+    "      hide(WindowInsetsCompat.Type.systemBars())",
+    "    }",
+    "  }",
+  ].join("\n");
+
+  if (nextSource.includes("override fun onCreate(savedInstanceState: Bundle?)")) {
+    nextSource = nextSource.replace(
+      "super.onCreate(savedInstanceState)",
+      "super.onCreate(savedInstanceState)\n    applyImmersiveFullscreen()",
+    );
+    return nextSource.includes("private fun applyImmersiveFullscreen()")
+      ? nextSource
+      : insertBeforeClosingBrace(nextSource, helperSource);
+  }
+
+  const classWithBodyPattern = /class\s+MainActivity\s*:\s*TauriActivity\(\)\s*\{/;
+  if (classWithBodyPattern.test(nextSource)) {
+    return insertBeforeClosingBrace(nextSource, [
+      "  override fun onCreate(savedInstanceState: Bundle?) {",
+      "    super.onCreate(savedInstanceState)",
+      "    applyImmersiveFullscreen()",
+      "  }",
+      "",
+      helperSource,
+    ].join("\n"));
+  }
+
+  return nextSource.replace(
+    /class\s+MainActivity\s*:\s*TauriActivity\(\)\s*$/m,
+    [
+      "class MainActivity : TauriActivity() {",
+      "  override fun onCreate(savedInstanceState: Bundle?) {",
+      "    super.onCreate(savedInstanceState)",
+      "    applyImmersiveFullscreen()",
+      "  }",
+      "",
+      helperSource,
+      "}",
+    ].join("\n"),
+  );
+};
+
+const ensureJavaMainActivityImmersiveFullscreen = (source: string): string => {
+  if (source.includes(ANDROID_IMMERSIVE_MARKER)) {
+    return ensureImportsAfterPackage(source, [
+      "import android.os.Bundle;",
+      "import androidx.core.view.WindowCompat;",
+      "import androidx.core.view.WindowInsetsCompat;",
+      "import androidx.core.view.WindowInsetsControllerCompat;",
+    ]);
+  }
+
+  let nextSource = ensureImportsAfterPackage(source, [
+    "import android.os.Bundle;",
+    "import androidx.core.view.WindowCompat;",
+    "import androidx.core.view.WindowInsetsCompat;",
+    "import androidx.core.view.WindowInsetsControllerCompat;",
+  ]);
+
+  const helperSource = [
+    "  private void applyImmersiveFullscreen() {",
+    "    WindowInsetsControllerCompat windowInsetsController =",
+    "      WindowCompat.getInsetsController(getWindow(), getWindow().getDecorView());",
+    "    windowInsetsController.setSystemBarsBehavior(",
+    "      WindowInsetsControllerCompat.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE",
+    "    );",
+    "    windowInsetsController.hide(WindowInsetsCompat.Type.systemBars());",
+    "  }",
+  ].join("\n");
+
+  if (nextSource.includes("protected void onCreate(Bundle savedInstanceState)")) {
+    nextSource = nextSource.replace(
+      "super.onCreate(savedInstanceState);",
+      "super.onCreate(savedInstanceState);\n    applyImmersiveFullscreen();",
+    );
+    return nextSource.includes("private void applyImmersiveFullscreen()")
+      ? nextSource
+      : insertBeforeClosingBrace(nextSource, helperSource);
+  }
+
+  const classWithBodyPattern = /class\s+MainActivity\s+extends\s+TauriActivity\s*\{/;
+  if (classWithBodyPattern.test(nextSource)) {
+    return insertBeforeClosingBrace(nextSource, [
+      "  @Override",
+      "  protected void onCreate(Bundle savedInstanceState) {",
+      "    super.onCreate(savedInstanceState);",
+      "    applyImmersiveFullscreen();",
+      "  }",
+      "",
+      helperSource,
+    ].join("\n"));
+  }
+
+  return nextSource.replace(
+    /class\s+MainActivity\s+extends\s+TauriActivity\s*$/m,
+    [
+      "public class MainActivity extends TauriActivity {",
+      "  @Override",
+      "  protected void onCreate(Bundle savedInstanceState) {",
+      "    super.onCreate(savedInstanceState);",
+      "    applyImmersiveFullscreen();",
+      "  }",
+      "",
+      helperSource,
+      "}",
+    ].join("\n"),
+  );
+};
+
+const upsertPlistString = (source: string, key: string, value: string): string => {
+  const entryPattern = new RegExp(`<key>${key}<\\/key>\\s*<string>[\\s\\S]*?<\\/string>`);
+  const replacement = `<key>${key}</key>\n\t<string>${value}</string>`;
+  if (entryPattern.test(source)) {
+    return source.replace(entryPattern, replacement);
+  }
+  return source.replace(/<\/dict>/, `\t${replacement}\n</dict>`);
+};
+
+const readConfiguredDisplayName = (projectRoot: string): string => {
+  const configPath = resolve(projectRoot, "src-tauri", "tauri.conf.json");
+  const config = JSON.parse(readFileSync(configPath, "utf8")) as { productName?: unknown };
+
+  if (typeof config.productName !== "string" || config.productName.trim().length === 0) {
+    throw new Error("Tauri mobile shell policy requires a non-empty top-level productName in src-tauri/tauri.conf.json.");
+  }
+
+  return config.productName;
+};
+
 export const ensureAndroidManifestLandscape = (source: string): string => {
   const activityPattern = /<activity\b[^>]*android:name="[^"]*MainActivity"[^>]*>/;
   const activityTag = source.match(activityPattern)?.[0];
@@ -69,15 +272,30 @@ export const ensureAndroidStylesFullscreen = (source: string): string => {
     throw new Error("Android styles.xml is missing a <style> block for mobile shell fullscreen policy.");
   }
 
-  let nextStyle = styleMatch[0];
-  if (!nextStyle.includes(ANDROID_FULLSCREEN_STYLE_ITEM)) {
-    nextStyle = nextStyle.replace(/<\/style>/, `    ${ANDROID_FULLSCREEN_STYLE_ITEM}\n</style>`);
-  }
+  let nextStyle = styleMatch[0].replace(ANDROID_FULLSCREEN_STYLE_ITEM_PATTERN, "\n");
   if (!nextStyle.includes(ANDROID_CUTOUT_STYLE_ITEM)) {
     nextStyle = nextStyle.replace(/<\/style>/, `    ${ANDROID_CUTOUT_STYLE_ITEM}\n</style>`);
   }
 
   return source.replace(styleMatch[0], nextStyle);
+};
+
+export const ensureAndroidStringsDisplayName = (source: string, displayName: string): string => {
+  let nextSource = upsertAndroidString(source, "app_name", displayName);
+  nextSource = upsertAndroidString(nextSource, "main_activity_title", displayName);
+  return nextSource;
+};
+
+export const ensureAndroidMainActivityImmersiveFullscreen = (source: string): string => {
+  if (source.includes("class MainActivity :")) {
+    return ensureKotlinMainActivityImmersiveFullscreen(source);
+  }
+
+  if (source.includes("class MainActivity extends")) {
+    return ensureJavaMainActivityImmersiveFullscreen(source);
+  }
+
+  throw new Error("Android MainActivity source does not match the expected Kotlin or Java Tauri activity template.");
 };
 
 const upsertPlistBoolean = (source: string, key: string, value: boolean): string => {
@@ -105,12 +323,14 @@ const upsertPlistArray = (source: string, key: string, values: readonly string[]
   return source.replace(/<\/dict>/, `${replacement}\n</dict>`);
 };
 
-export const ensureIosInfoPlistLandscapeFullscreen = (source: string): string => {
+export const ensureIosInfoPlistLandscapeFullscreen = (source: string, displayName: string): string => {
   let nextSource = upsertPlistArray(source, "UISupportedInterfaceOrientations", IOS_ORIENTATION_VALUES);
   nextSource = upsertPlistArray(nextSource, "UISupportedInterfaceOrientations~ipad", IOS_ORIENTATION_VALUES);
   nextSource = upsertPlistBoolean(nextSource, "UIRequiresFullScreen", true);
   nextSource = upsertPlistBoolean(nextSource, "UIStatusBarHidden", true);
   nextSource = upsertPlistBoolean(nextSource, "UIViewControllerBasedStatusBarAppearance", false);
+  nextSource = upsertPlistString(nextSource, "CFBundleDisplayName", displayName);
+  nextSource = upsertPlistString(nextSource, "CFBundleName", displayName);
   return nextSource;
 };
 
@@ -118,6 +338,8 @@ export const prepareMobileShellPolicy = (
   platforms: MobilePlatform[],
   projectRoot: string = process.cwd(),
 ): void => {
+  const displayName = readConfiguredDisplayName(projectRoot);
+
   if (platforms.includes("android")) {
     const androidProjectDir = resolveTauriMobileProjectDir("android", projectRoot);
     const manifestPath = preferProjectFile(
@@ -131,13 +353,26 @@ export const prepareMobileShellPolicy = (
       collectFilesByName(androidProjectDir, "themes.xml"),
       "app/src/main/res/values/themes.xml",
     );
+    const stringsPath = preferProjectFile(
+      collectFilesByName(androidProjectDir, "strings.xml"),
+      "app/src/main/res/values/strings.xml",
+    );
+    const mainActivityPath = preferProjectFile(
+      collectFilesByName(androidProjectDir, "MainActivity.kt"),
+      "app/src/main/java/MainActivity.kt",
+    ) ?? preferProjectFile(
+      collectFilesByName(androidProjectDir, "MainActivity.java"),
+      "app/src/main/java/MainActivity.java",
+    );
 
-    if (!manifestPath || !stylesPath) {
-      throw new Error("Android mobile shell policy requires generated manifest and theme/style files after tauri android init.");
+    if (!manifestPath || !stylesPath || !stringsPath || !mainActivityPath) {
+      throw new Error("Android mobile shell policy requires generated manifest, theme/style, strings, and MainActivity files after tauri android init.");
     }
 
     writeFileSync(manifestPath, ensureAndroidManifestLandscape(readFileSync(manifestPath, "utf8")), "utf8");
     writeFileSync(stylesPath, ensureAndroidStylesFullscreen(readFileSync(stylesPath, "utf8")), "utf8");
+    writeFileSync(stringsPath, ensureAndroidStringsDisplayName(readFileSync(stringsPath, "utf8"), displayName), "utf8");
+    writeFileSync(mainActivityPath, ensureAndroidMainActivityImmersiveFullscreen(readFileSync(mainActivityPath, "utf8")), "utf8");
   }
 
   if (platforms.includes("ios")) {
@@ -150,7 +385,11 @@ export const prepareMobileShellPolicy = (
     }
 
     for (const infoPlistPath of infoPlistPaths) {
-      writeFileSync(infoPlistPath, ensureIosInfoPlistLandscapeFullscreen(readFileSync(infoPlistPath, "utf8")), "utf8");
+      writeFileSync(
+        infoPlistPath,
+        ensureIosInfoPlistLandscapeFullscreen(readFileSync(infoPlistPath, "utf8"), displayName),
+        "utf8",
+      );
     }
   }
 };
