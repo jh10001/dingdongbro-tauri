@@ -12,7 +12,7 @@ describe("github actions workflow", () => {
 
     for (const snippet of [
       "name: build-native-shell",
-      'BUN_VERSION: "1.3.8"',
+      'BUN_VERSION: "1.3.11"',
       'FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"',
       "workflow_dispatch:",
       "ubuntu-22.04",
@@ -23,6 +23,7 @@ describe("github actions workflow", () => {
       "~/.bun/install/cache",
       "node_modules",
       "bun-version: ${{ env.BUN_VERSION }}",
+      "workspaces: ./src-tauri -> target",
       "windows-tauri-tools-${{ hashFiles('bun.lock', 'package.json') }}",
       "~/AppData/Local/tauri",
       "bun run build:desktop",
