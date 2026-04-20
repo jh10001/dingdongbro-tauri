@@ -92,13 +92,14 @@ describe("mobile shell policy helpers", () => {
     expect(infoPlist).toContain("叮咚兄弟");
   });
 
-  it("rewrites generated Android and iOS projects in place", async () => {
+  it("rewrites generated Android and iOS projects in place with platform-specific display names", async () => {
     const projectRoot = await createTempDir("dingdong-mobile-policy-");
     const androidValuesDir = join(projectRoot, "src-tauri", "gen", "android", "app", "src", "main", "res", "values");
     const androidManifestDir = join(projectRoot, "src-tauri", "gen", "android", "app", "src", "main");
     const androidKotlinDir = join(projectRoot, "src-tauri", "gen", "android", "app", "src", "main", "java", "com", "dingdongbro", "game");
     const iosAppDir = join(projectRoot, "src-tauri", "gen", "apple", "DingDongBro", "DingDongBro_iOS");
     const tauriConfigPath = join(projectRoot, "src-tauri", "tauri.conf.json");
+    const tauriIosConfigPath = join(projectRoot, "src-tauri", "tauri.ios.conf.json");
 
     await mkdir(androidValuesDir, { recursive: true });
     await mkdir(androidManifestDir, { recursive: true });
@@ -110,6 +111,7 @@ describe("mobile shell policy helpers", () => {
     await writeFile(join(androidKotlinDir, "MainActivity.kt"), SAMPLE_ANDROID_MAIN_ACTIVITY, "utf8");
     await writeFile(join(iosAppDir, "Info.plist"), SAMPLE_INFO_PLIST, "utf8");
     await writeFile(tauriConfigPath, JSON.stringify({ productName: "叮咚兄弟" }, null, 2), "utf8");
+    await writeFile(tauriIosConfigPath, JSON.stringify({ productName: "DingDongBro" }, null, 2), "utf8");
 
     prepareMobileShellPolicy(["android", "ios"], projectRoot);
 
@@ -127,6 +129,9 @@ describe("mobile shell policy helpers", () => {
     );
     await expect(readFile(join(iosAppDir, "Info.plist"), "utf8")).resolves.toContain(
       "CFBundleDisplayName",
+    );
+    await expect(readFile(join(iosAppDir, "Info.plist"), "utf8")).resolves.toContain(
+      "DingDongBro",
     );
   });
 });

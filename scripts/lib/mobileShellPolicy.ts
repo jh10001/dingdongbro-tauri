@@ -238,12 +238,30 @@ const upsertPlistString = (source: string, key: string, value: string): string =
   return source.replace(/<\/dict>/, `\t${replacement}\n</dict>`);
 };
 
-const readConfiguredDisplayName = (projectRoot: string): string => {
-  const configPath = resolve(projectRoot, "src-tauri", "tauri.conf.json");
+const readConfiguredDisplayName = (
+  projectRoot: string,
+  platform?: MobilePlatform,
+): string => {
+  const configDir = resolve(projectRoot, "src-tauri");
+  const configPath = resolve(configDir, "tauri.conf.json");
   const config = JSON.parse(readFileSync(configPath, "utf8")) as { productName?: unknown };
 
   if (typeof config.productName !== "string" || config.productName.trim().length === 0) {
     throw new Error("Tauri mobile shell policy requires a non-empty top-level productName in src-tauri/tauri.conf.json.");
+  }
+
+  if (!platform) {
+    return config.productName;
+  }
+
+  const platformConfigPath = resolve(configDir, `tauri.${platform}.conf.json`);
+  if (!existsSync(platformConfigPath)) {
+    return config.productName;
+  }
+
+  const platformConfig = JSON.parse(readFileSync(platformConfigPath, "utf8")) as { productName?: unknown };
+  if (typeof platformConfig.productName === "string" && platformConfig.productName.trim().length > 0) {
+    return platformConfig.productName;
   }
 
   return config.productName;
@@ -338,9 +356,8 @@ export const prepareMobileShellPolicy = (
   platforms: MobilePlatform[],
   projectRoot: string = process.cwd(),
 ): void => {
-  const displayName = readConfiguredDisplayName(projectRoot);
-
   if (platforms.includes("android")) {
+    const displayName = readConfiguredDisplayName(projectRoot, "android");
     const androidProjectDir = resolveTauriMobileProjectDir("android", projectRoot);
     const manifestPath = preferProjectFile(
       collectFilesByName(androidProjectDir, "AndroidManifest.xml"),
@@ -376,6 +393,7 @@ export const prepareMobileShellPolicy = (
   }
 
   if (platforms.includes("ios")) {
+    const displayName = readConfiguredDisplayName(projectRoot, "ios");
     const iosProjectDir = resolveTauriMobileProjectDir("ios", projectRoot);
     const infoPlistPaths = collectFilesByName(iosProjectDir, "Info.plist")
       .filter((filePath) => !filePath.includes(`${resolve(iosProjectDir, "Pods")}`));

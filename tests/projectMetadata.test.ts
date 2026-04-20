@@ -40,4 +40,18 @@ describe("tauri shell project metadata", () => {
     expect(tauriConfig.app?.windows?.[0]?.title).toBe("叮咚兄弟");
     expect(tauriConfig.bundle?.windows?.wix?.language).toBe("zh-CN");
   });
+
+  it("overrides only the iOS packaged app name to ASCII for crash triage", async () => {
+    const iosConfig = await readJson<{
+      productName?: string;
+      mainBinaryName?: string;
+    }>("../src-tauri/tauri.ios.conf.json");
+    const iosInfoPlist = await readFile(new URL("../src-tauri/Info.ios.plist", import.meta.url), "utf8");
+
+    expect(iosConfig.productName).toBe("DingDongBro");
+    expect(iosConfig.mainBinaryName).toBe("DingDongBro");
+    expect(iosInfoPlist).toContain("<key>CFBundleDisplayName</key>");
+    expect(iosInfoPlist).toContain("<string>DingDongBro</string>");
+    expect(iosInfoPlist).toContain("<key>CFBundleName</key>");
+  });
 });
