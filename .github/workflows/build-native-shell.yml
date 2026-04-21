@@ -342,13 +342,15 @@ jobs:
         run: |
           APP_NAME="${TAURI_IOS_APP_NAME:?Missing archived iOS app name}"
           ARCHIVE_PATH="${TAURI_IOS_ARCHIVE_PATH:?Missing archived iOS path}"
-          APP_PATH="${ARCHIVE_PATH}/Products/Applications/${APP_NAME}.app"
-          IPA_PATH="src-tauri/gen/apple/build/${APP_NAME}-unsigned.ipa"
+          APP_PATH="$(find "${ARCHIVE_PATH}/Products/Applications" -maxdepth 1 -name '*.app' -type d | head -n 1)"
 
-          if [ ! -d "$APP_PATH" ]; then
-            echo "Missing archived app bundle at $APP_PATH" >&2
+          if [ -z "$APP_PATH" ] || [ ! -d "$APP_PATH" ]; then
+            echo "Missing archived app bundle under ${ARCHIVE_PATH}/Products/Applications" >&2
             exit 1
           fi
+
+          APP_BUNDLE_NAME="$(basename "$APP_PATH" .app)"
+          IPA_PATH="src-tauri/gen/apple/build/${APP_BUNDLE_NAME}-unsigned.ipa"
 
           PAYLOAD_ROOT="$(mktemp -d)"
           mkdir -p "${PAYLOAD_ROOT}/Payload"
