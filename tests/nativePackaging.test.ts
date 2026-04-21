@@ -10,9 +10,11 @@ import {
   DESKTOP_TAURI_SHELL_CONFIG_FILE,
   DESKTOP_TAURI_SHELL_OUTPUT_DIR,
   getDefaultMobilePlatformsForHost,
-  getTauriMobileIconArgs,
+  getTauriDesktopBuildArgs,
   getTauriMobileBuildArgs,
+  getTauriMobileIconArgs,
   getTauriMobileInitArgs,
+  MACOS_UNIVERSAL_DESKTOP_TARGET,
   MOBILE_TAURI_ICON_INPUT,
   MOBILE_TAURI_IOS_ICON_BACKGROUND,
   MOBILE_NATIVE_SHELL_RUNTIME,
@@ -126,6 +128,17 @@ describe("native packaging helpers", () => {
     );
     expect(DESKTOP_TAURI_SHELL_CONFIG_FILE).toBe("shell-config.js");
     expect(DESKTOP_TAURI_SHELL_OUTPUT_DIR.endsWith("build/desktop-shell")).toBe(true);
+  });
+
+  it("builds macOS desktop packages as universal binaries", () => {
+    expect(getTauriDesktopBuildArgs("linux")).toEqual(["tauri", "build"]);
+    expect(getTauriDesktopBuildArgs("win32")).toEqual(["tauri", "build"]);
+    expect(getTauriDesktopBuildArgs("darwin")).toEqual([
+      "tauri",
+      "build",
+      "--target",
+      MACOS_UNIVERSAL_DESKTOP_TARGET,
+    ]);
   });
 
   it("points Tauri packaging at the generated desktop shell frontend", async () => {

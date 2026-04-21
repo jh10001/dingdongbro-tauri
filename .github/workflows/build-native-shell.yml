@@ -93,7 +93,14 @@ jobs:
             patchelf
 
       - name: Install Rust stable
+        if: runner.os != 'macOS'
         uses: dtolnay/rust-toolchain@stable
+
+      - name: Install Rust stable with macOS universal targets
+        if: runner.os == 'macOS'
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: aarch64-apple-darwin,x86_64-apple-darwin
 
       - name: Cache Rust build artifacts
         uses: swatinem/rust-cache@v2
@@ -140,6 +147,7 @@ jobs:
           name: dingdongbro-desktop-${{ matrix.os }}
           path: |
             src-tauri/target/release/bundle/**/*
+            src-tauri/target/*/release/bundle/**/*
             build/portable/**/*.7z
           if-no-files-found: error
 

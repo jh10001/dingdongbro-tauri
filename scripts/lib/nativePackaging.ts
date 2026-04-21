@@ -7,6 +7,7 @@ export const NATIVE_RELEASE_REMOTE_URL_ENV = "NATIVE_RELEASE_REMOTE_URL";
 export const DEFAULT_NATIVE_RELEASE_REMOTE_URL = "https://dingdongbro.272.chat/";
 export const DESKTOP_TAURI_SHELL_OUTPUT_DIR = resolve(process.cwd(), "build", "desktop-shell");
 export const DESKTOP_TAURI_SHELL_CONFIG_FILE = "shell-config.js";
+export const MACOS_UNIVERSAL_DESKTOP_TARGET = "universal-apple-darwin";
 export const MOBILE_TAURI_ICON_INPUT = "src-tauri/icons/icon.png";
 export const MOBILE_TAURI_IOS_ICON_BACKGROUND = "#ffffff";
 export const NATIVE_SHELL_RUNTIME_QUERY_PARAM = "native_runtime";
@@ -87,6 +88,14 @@ export const createDesktopShellConfigSource = (remoteUrl: string, shellRuntime: 
   JSON.stringify(appendNativeShellRuntimeQuery(remoteUrl, shellRuntime)),
   ";\n",
 ].join("");
+
+export const getTauriDesktopBuildArgs = (
+  hostPlatform: string = process.platform,
+): string[] => [
+  "tauri",
+  "build",
+  ...(hostPlatform === "darwin" ? ["--target", MACOS_UNIVERSAL_DESKTOP_TARGET] : []),
+];
 
 export const getDefaultMobilePlatformsForHost = (
   hostPlatform: SupportedMobileHostPlatform = process.platform as SupportedMobileHostPlatform,

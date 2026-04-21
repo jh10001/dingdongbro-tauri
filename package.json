@@ -1,9 +1,8 @@
 {
   "name": "dingdong-survivors-tauri-shell",
-  "version": "0.3.2",
+  "version": "0.7.0",
   "private": true,
   "type": "module",
-  "packageManager": "bun@1.3.11",
   "scripts": {
     "build:shell": "bun scripts/build-desktop-shell.ts",
     "build:desktop": "bun scripts/package-desktop.ts",

@@ -38,6 +38,7 @@ describe("tauri shell package scripts", () => {
     buildDesktopPackage({
       env: { NATIVE_RELEASE_REMOTE_URL: "https://example.com/shell" },
       execute,
+      hostPlatform: "linux",
       projectRoot: "/tmp/tauri-shell",
     });
 
@@ -45,6 +46,31 @@ describe("tauri shell package scripts", () => {
       {
         command: "bun",
         args: ["tauri", "build"],
+        options: {
+          cwd: "/tmp/tauri-shell",
+          envOverrides: {
+            NATIVE_RELEASE_REMOTE_URL: "https://example.com/shell/",
+            VITE_APP_RUNTIME: "desktop",
+          },
+        },
+      },
+    ]);
+  });
+
+  it("passes the universal macOS target when desktop packaging runs on macOS", () => {
+    const { calls, execute } = createCommandRecorder();
+
+    buildDesktopPackage({
+      env: { NATIVE_RELEASE_REMOTE_URL: "https://example.com/shell" },
+      execute,
+      hostPlatform: "darwin",
+      projectRoot: "/tmp/tauri-shell",
+    });
+
+    expect(calls).toEqual([
+      {
+        command: "bun",
+        args: ["tauri", "build", "--target", "universal-apple-darwin"],
         options: {
           cwd: "/tmp/tauri-shell",
           envOverrides: {
