@@ -1,6 +1,6 @@
 [package]
 name = "dingdong-survivors-native"
-version = "0.3.2"
+version = "0.7.0"
 description = "DingDongBro native shell"
 authors = ["codex"]
 license = ""

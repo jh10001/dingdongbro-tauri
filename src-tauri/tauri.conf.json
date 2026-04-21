@@ -1,7 +1,7 @@
 {
   "$schema": "../node_modules/@tauri-apps/cli/config.schema.json",
   "productName": "叮咚兄弟",
-  "version": "0.3.2",
+  "version": "0.7.0",
   "identifier": "com.dingdongbro.game",
   "build": {
     "frontendDist": "../build/desktop-shell",
