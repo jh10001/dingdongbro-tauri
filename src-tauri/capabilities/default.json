@@ -2,10 +2,16 @@
   "$schema": "../gen/schemas/desktop-schema.json",
   "identifier": "default",
   "description": "enables the default permissions",
+  "remote": {
+    "urls": [
+      "https://dingdongbro.272.chat/*"
+    ]
+  },
   "windows": [
     "main"
   ],
   "permissions": [
-    "core:default"
+    "core:default",
+    "core:window:allow-set-fullscreen"
   ]
 }

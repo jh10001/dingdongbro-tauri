@@ -41,6 +41,18 @@ describe("tauri shell project metadata", () => {
     expect(tauriConfig.bundle?.windows?.wix?.language).toBe("zh-CN");
   });
 
+  it("allows the hosted desktop shell origin to use native fullscreen window APIs", async () => {
+    const capability = await readJson<{
+      remote?: { urls?: string[] };
+      permissions?: string[];
+      windows?: string[];
+    }>("../src-tauri/capabilities/default.json");
+
+    expect(capability.windows).toContain("main");
+    expect(capability.remote?.urls).toContain("https://dingdongbro.272.chat/*");
+    expect(capability.permissions).toContain("core:window:allow-set-fullscreen");
+  });
+
   it("overrides only the iOS packaged app name to ASCII for crash triage", async () => {
     const iosConfig = await readJson<{
       productName?: string;
