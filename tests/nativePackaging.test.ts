@@ -74,10 +74,12 @@ describe("native packaging helpers", () => {
   });
 
   it("builds tauri mobile init and build arguments", () => {
-    expect(getTauriMobileInitArgs("android")).toEqual(["tauri", "android", "init", "--ci", "--skip-targets-install"]);
-    expect(getTauriMobileBuildArgs("android")).toEqual(["tauri", "android", "build", "--ci"]);
-    expect(getTauriMobileBuildArgs("ios", { openProject: true })).toEqual(["tauri", "ios", "build", "--open", "--ci"]);
+    expect(getTauriMobileInitArgs("android")).toEqual(["x", "--bun", "tauri", "android", "init", "--ci", "--skip-targets-install"]);
+    expect(getTauriMobileBuildArgs("android")).toEqual(["x", "--bun", "tauri", "android", "build", "--ci"]);
+    expect(getTauriMobileBuildArgs("ios", { openProject: true })).toEqual(["x", "--bun", "tauri", "ios", "build", "--open", "--ci"]);
     expect(getTauriMobileBuildArgs("android", { extraArgs: ["--apk", "--target", "aarch64"] })).toEqual([
+      "x",
+      "--bun",
       "tauri",
       "android",
       "build",
@@ -87,6 +89,8 @@ describe("native packaging helpers", () => {
       "aarch64",
     ]);
     expect(getTauriMobileIconArgs()).toEqual([
+      "x",
+      "--bun",
       "tauri",
       "icon",
       MOBILE_TAURI_ICON_INPUT,
@@ -131,9 +135,11 @@ describe("native packaging helpers", () => {
   });
 
   it("builds macOS desktop packages as universal binaries", () => {
-    expect(getTauriDesktopBuildArgs("linux")).toEqual(["tauri", "build"]);
-    expect(getTauriDesktopBuildArgs("win32")).toEqual(["tauri", "build"]);
+    expect(getTauriDesktopBuildArgs("linux")).toEqual(["x", "--bun", "tauri", "build"]);
+    expect(getTauriDesktopBuildArgs("win32")).toEqual(["x", "--bun", "tauri", "build"]);
     expect(getTauriDesktopBuildArgs("darwin")).toEqual([
+      "x",
+      "--bun",
       "tauri",
       "build",
       "--target",

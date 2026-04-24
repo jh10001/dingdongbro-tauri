@@ -45,7 +45,7 @@ describe("tauri shell package scripts", () => {
     expect(calls).toEqual([
       {
         command: "bun",
-        args: ["tauri", "build"],
+        args: ["x", "--bun", "tauri", "build"],
         options: {
           cwd: "/tmp/tauri-shell",
           envOverrides: {
@@ -70,7 +70,7 @@ describe("tauri shell package scripts", () => {
     expect(calls).toEqual([
       {
         command: "bun",
-        args: ["tauri", "build", "--target", "universal-apple-darwin"],
+        args: ["x", "--bun", "tauri", "build", "--target", "universal-apple-darwin"],
         options: {
           cwd: "/tmp/tauri-shell",
           envOverrides: {
@@ -113,7 +113,7 @@ describe("tauri shell package scripts", () => {
     expect(calls).toEqual([
       {
         command: "bun",
-        args: ["tauri", "android", "init", "--ci", "--skip-targets-install"],
+        args: ["x", "--bun", "tauri", "android", "init", "--ci", "--skip-targets-install"],
         options: {
           cwd: "/tmp/tauri-shell",
           envOverrides: {
@@ -124,7 +124,7 @@ describe("tauri shell package scripts", () => {
       },
       {
         command: "bun",
-        args: ["tauri", "icon", "src-tauri/icons/icon.png", "--ios-color", "#ffffff"],
+        args: ["x", "--bun", "tauri", "icon", "src-tauri/icons/icon.png", "--ios-color", "#ffffff"],
         options: {
           cwd: "/tmp/tauri-shell",
           envOverrides: {
@@ -135,7 +135,7 @@ describe("tauri shell package scripts", () => {
       },
       {
         command: "bun",
-        args: ["tauri", "android", "build", "--ci"],
+        args: ["x", "--bun", "tauri", "android", "build", "--ci"],
         options: {
           cwd: "/tmp/tauri-shell",
           envOverrides: {
@@ -177,7 +177,7 @@ describe("tauri shell package scripts", () => {
     expect(calls).toEqual([
       {
         command: "bun",
-        args: ["tauri", "icon", "src-tauri/icons/icon.png", "--ios-color", "#ffffff"],
+        args: ["x", "--bun", "tauri", "icon", "src-tauri/icons/icon.png", "--ios-color", "#ffffff"],
         options: {
           cwd: "/tmp/tauri-shell",
           envOverrides: {
@@ -188,7 +188,7 @@ describe("tauri shell package scripts", () => {
       },
       {
         command: "bun",
-        args: ["tauri", "android", "build", "--ci"],
+        args: ["x", "--bun", "tauri", "android", "build", "--ci"],
         options: {
           cwd: "/tmp/tauri-shell",
           envOverrides: {
@@ -226,7 +226,7 @@ describe("tauri shell package scripts", () => {
     expect(calls).toEqual([
       {
         command: "bun",
-        args: ["tauri", "icon", "src-tauri/icons/icon.png", "--ios-color", "#ffffff"],
+        args: ["x", "--bun", "tauri", "icon", "src-tauri/icons/icon.png", "--ios-color", "#ffffff"],
         options: {
           cwd: "/tmp/tauri-shell",
           envOverrides: {
@@ -237,7 +237,7 @@ describe("tauri shell package scripts", () => {
       },
       {
         command: "bun",
-        args: ["tauri", "android", "build", "--ci", "--apk", "--target", "aarch64"],
+        args: ["x", "--bun", "tauri", "android", "build", "--ci", "--apk", "--target", "aarch64"],
         options: {
           cwd: "/tmp/tauri-shell",
           envOverrides: {

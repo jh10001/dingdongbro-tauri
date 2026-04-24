@@ -92,6 +92,8 @@ export const createDesktopShellConfigSource = (remoteUrl: string, shellRuntime: 
 export const getTauriDesktopBuildArgs = (
   hostPlatform: string = process.platform,
 ): string[] => [
+  "x",
+  "--bun",
   "tauri",
   "build",
   ...(hostPlatform === "darwin" ? ["--target", MACOS_UNIVERSAL_DESKTOP_TARGET] : []),
@@ -131,6 +133,8 @@ export const resolveTauriMobileProjectDir = (
 ): string => resolve(projectRoot, ...TAURI_MOBILE_PROJECT_DIRS[platform]);
 
 export const getTauriMobileInitArgs = (platform: MobilePlatform): string[] => [
+  "x",
+  "--bun",
   "tauri",
   platform,
   "init",
@@ -142,6 +146,8 @@ export const getTauriMobileBuildArgs = (
   platform: MobilePlatform,
   options: { extraArgs?: string[]; openProject?: boolean } = {},
 ): string[] => [
+  "x",
+  "--bun",
   "tauri",
   platform,
   "build",
@@ -151,6 +157,8 @@ export const getTauriMobileBuildArgs = (
 ];
 
 export const getTauriMobileIconArgs = (): string[] => [
+  "x",
+  "--bun",
   "tauri",
   "icon",
   MOBILE_TAURI_ICON_INPUT,
